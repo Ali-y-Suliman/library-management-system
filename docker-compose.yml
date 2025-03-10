@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: library_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: p@$sW0Rd
+      MYSQL_DATABASE: library_management
+      MYSQL_USER: library_user
+      MYSQL_PASSWORD: library_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  app:
+    build: .
+    container_name: library_app
+    restart: always
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      - DB_USER=root
+      - DB_PASSWORD=0000
+      - DB_HOST=localhost
+      - DB_PORT=3306
+      - DB_NAME=library_db
+      - API_SECRET_KEY=my$eCRetKeYF0rL!bR@ry
+      - SERVER_HOST=127.0.0.1
+      - SERVER_PORT=8000
+      - REDIS_URL=redis://redis:6379/0
+      - SSL_CERT_PATH=./app/ssl/cert.pem
+      - SSL_KEY_PATH=./app/ssl/key.pem
+
+volumes:
+  mysql_data:
+  redis_data:
